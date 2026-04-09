@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Outcomes Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      padding: 32px 24px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: #f8fafc;
+    }
+
+    header p {
+      margin-top: 8px;
+      color: #94a3b8;
+      font-size: 0.95rem;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      gap: 32px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #1e2330;
+      border: 1px solid #2d3548;
+      border-radius: 16px;
+      padding: 28px 28px 20px;
+    }
+
+    .card h2 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #f1f5f9;
+      margin-bottom: 4px;
+    }
+
+    .card p.subtitle {
+      font-size: 0.82rem;
+      color: #64748b;
+      margin-bottom: 20px;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 300px;
+    }
+
+    .legend-row {
+      display: flex;
+      gap: 20px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Student Outcomes Dashboard</h1>
+    <p>Math (n=395) &amp; Portuguese (n=649) — UCI Student Performance Dataset</p>
+  </header>
+
+  <div class="charts-grid">
+
+    <!-- Chart 1: Final Grade Distribution -->
+    <div class="card">
+      <h2>Final Grade Distribution — Mathematics</h2>
+      <p class="subtitle">Number of students per final grade (G3, scale 0–20). Grade ≥ 10 is a pass.</p>
+      <div class="chart-wrap">
+        <canvas id="chart1"></canvas>
+      </div>
+      <div class="legend-row">
+        <div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>Failing (&lt;10)</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>Passing (≥10)</div>
+      </div>
+    </div>
+
+    <!-- Chart 2: Avg Grade by Study Time -->
+    <div class="card">
+      <h2>Average Final Grade by Weekly Study Time</h2>
+      <p class="subtitle">More study time is associated with higher grades across both subjects.</p>
+      <div class="chart-wrap">
+        <canvas id="chart2"></canvas>
+      </div>
+      <div class="legend-row">
+        <div class="legend-item"><span class="legend-dot" style="background:#6366f1"></span>Mathematics</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>Portuguese</div>
+      </div>
+    </div>
+
+    <!-- Chart 3: Pass Rate by Past Failures -->
+    <div class="card">
+      <h2>Pass Rate by Number of Past Course Failures</h2>
+      <p class="subtitle">Students with prior failures have significantly lower pass rates.</p>
+      <div class="chart-wrap">
+        <canvas id="chart3"></canvas>
+      </div>
+      <div class="legend-row">
+        <div class="legend-item"><span class="legend-dot" style="background:#06b6d4"></span>Mathematics</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#ec4899"></span>Portuguese</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.borderColor = '#2d3548';
+    Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+
+    const gridColor = 'rgba(255,255,255,0.06)';
+
+    // ── Chart 1: Final Grade Distribution (Math) ───────────────────────────
+    const grades    = [0,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20];
+    const gradeCnts = [38,1,7,15,9,32,28,56,47,31,31,27,33,16,6,12,5,1];
+    const barColors = grades.map(g => g >= 10 ? 'rgba(34,197,94,0.75)' : 'rgba(239,68,68,0.75)');
+    const barBorders = grades.map(g => g >= 10 ? 'rgba(34,197,94,1)' : 'rgba(239,68,68,1)');
+
+    new Chart(document.getElementById('chart1'), {
+      type: 'bar',
+      data: {
+        labels: grades.map(String),
+        datasets: [{
+          label: 'Students',
+          data: gradeCnts,
+          backgroundColor: barColors,
+          borderColor: barBorders,
+          borderWidth: 1,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: ctx => `Grade ${ctx[0].label}`,
+              label: ctx => ` ${ctx.raw} students`,
+              afterLabel: ctx => ctx.label >= 10 ? ' ✓ Pass' : ' ✗ Fail'
+            }
+          }
+        },
+        scales: {
+          x: { grid: { color: gridColor }, title: { display: true, text: 'Final Grade (G3)', color: '#64748b' } },
+          y: { grid: { color: gridColor }, title: { display: true, text: 'Number of Students', color: '#64748b' }, beginAtZero: true }
+        }
+      }
+    });
+
+    // ── Chart 2: Avg Final Grade by Study Time ────────────────────────────
+    const studyLabels = ['< 2 hrs', '2–5 hrs', '5–10 hrs', '> 10 hrs'];
+    const mathAvg  = [10.05, 10.17, 11.40, 11.26];
+    const porAvg   = [10.84, 12.09, 13.23, 13.06];
+
+    new Chart(document.getElementById('chart2'), {
+      type: 'bar',
+      data: {
+        labels: studyLabels,
+        datasets: [
+          {
+            label: 'Mathematics',
+            data: mathAvg,
+            backgroundColor: 'rgba(99,102,241,0.7)',
+            borderColor: 'rgba(99,102,241,1)',
+            borderWidth: 1,
+            borderRadius: 6,
+          },
+          {
+            label: 'Portuguese',
+            data: porAvg,
+            backgroundColor: 'rgba(245,158,11,0.7)',
+            borderColor: 'rgba(245,158,11,1)',
+            borderWidth: 1,
+            borderRadius: 6,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ` Avg Grade: ${ctx.raw.toFixed(2)}` } }
+        },
+        scales: {
+          x: { grid: { color: gridColor }, title: { display: true, text: 'Weekly Study Time', color: '#64748b' } },
+          y: {
+            grid: { color: gridColor },
+            title: { display: true, text: 'Average Final Grade', color: '#64748b' },
+            min: 8,
+            max: 15,
+            ticks: { stepSize: 1 }
+          }
+        }
+      }
+    });
+
+    // ── Chart 3: Pass Rate by Past Failures ───────────────────────────────
+    const failureLabels = ['0 failures', '1 failure', '2 failures', '3+ failures'];
+    const mathPass = [75.0, 48.0, 17.6, 25.0];
+    const porPass  = [90.7, 54.3, 50.0, 35.7];
+
+    new Chart(document.getElementById('chart3'), {
+      type: 'bar',
+      data: {
+        labels: failureLabels,
+        datasets: [
+          {
+            label: 'Mathematics',
+            data: mathPass,
+            backgroundColor: 'rgba(6,182,212,0.7)',
+            borderColor: 'rgba(6,182,212,1)',
+            borderWidth: 1,
+            borderRadius: 6,
+          },
+          {
+            label: 'Portuguese',
+            data: porPass,
+            backgroundColor: 'rgba(236,72,153,0.7)',
+            borderColor: 'rgba(236,72,153,1)',
+            borderWidth: 1,
+            borderRadius: 6,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ` Pass rate: ${ctx.raw}%` } }
+        },
+        scales: {
+          x: { grid: { color: gridColor }, title: { display: true, text: 'Past Course Failures', color: '#64748b' } },
+          y: {
+            grid: { color: gridColor },
+            title: { display: true, text: 'Pass Rate (%)', color: '#64748b' },
+            min: 0,
+            max: 100,
+            ticks: { callback: v => v + '%' }
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
