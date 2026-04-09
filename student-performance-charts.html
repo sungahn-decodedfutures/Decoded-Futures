@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Performance Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #6ee7b7, #3b82f6, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+    }
+
+    header p {
+      color: #94a3b8;
+      margin-top: 0.4rem;
+      font-size: 0.95rem;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 2.5rem;
+    }
+
+    .stat-card {
+      background: #1e2130;
+      border: 1px solid #2d3348;
+      border-radius: 12px;
+      padding: 1rem 1.8rem;
+      text-align: center;
+      min-width: 130px;
+    }
+
+    .stat-card .value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #6ee7b7;
+    }
+
+    .stat-card .label {
+      font-size: 0.78rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 0.2rem;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 1.8rem;
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+
+    .chart-card {
+      background: #1e2130;
+      border: 1px solid #2d3348;
+      border-radius: 16px;
+      padding: 1.5rem;
+    }
+
+    .chart-card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 0.3rem;
+    }
+
+    .chart-card .subtitle {
+      font-size: 0.8rem;
+      color: #475569;
+      margin-bottom: 1.2rem;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 280px;
+    }
+
+    /* Wide card spans full width */
+    .chart-card.wide {
+      grid-column: 1 / -1;
+    }
+
+    .chart-card.wide .chart-wrapper {
+      height: 300px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Student Performance Dashboard</h1>
+  <p>Academic Year 2024 – 2025 &nbsp;|&nbsp; 200 Students</p>
+</header>
+
+<!-- Summary stats -->
+<div class="stats-row">
+  <div class="stat-card"><div class="value">72%</div><div class="label">Pass Rate</div></div>
+  <div class="stat-card"><div class="value">74.3</div><div class="label">Avg Score</div></div>
+  <div class="stat-card"><div class="value">88%</div><div class="label">Avg Attendance</div></div>
+  <div class="stat-card"><div class="value">200</div><div class="label">Total Students</div></div>
+</div>
+
+<div class="charts-grid">
+
+  <!-- Chart 1: Grade Distribution -->
+  <div class="chart-card">
+    <h2>Grade Distribution</h2>
+    <p class="subtitle">Number of students per letter grade (A – F)</p>
+    <div class="chart-wrapper">
+      <canvas id="gradeDistChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 2: Average Score by Subject -->
+  <div class="chart-card">
+    <h2>Average Score by Subject</h2>
+    <p class="subtitle">Mean final score across core subjects</p>
+    <div class="chart-wrapper">
+      <canvas id="subjectChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 3: Attendance vs Final Score -->
+  <div class="chart-card wide">
+    <h2>Attendance Rate vs. Final Score</h2>
+    <p class="subtitle">Relationship between attendance and academic performance (each dot = 1 student)</p>
+    <div class="chart-wrapper">
+      <canvas id="attendanceChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ─── Shared theme ────────────────────────────────────────────────────────────
+  Chart.defaults.color = '#94a3b8';
+  Chart.defaults.borderColor = '#2d3348';
+  Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+
+  const tooltip = {
+    backgroundColor: '#1e2130',
+    borderColor: '#3b82f6',
+    borderWidth: 1,
+    titleColor: '#e2e8f0',
+    bodyColor: '#94a3b8',
+    padding: 10,
+    cornerRadius: 8,
+  };
+
+  // ─── Chart 1: Grade Distribution ────────────────────────────────────────────
+  // A:90-100, B:80-89, C:70-79, D:60-69, F:<60
+  const gradeCounts = { A: 32, B: 54, C: 61, D: 35, F: 18 };
+
+  new Chart(document.getElementById('gradeDistChart'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(gradeCounts),
+      datasets: [{
+        label: 'Students',
+        data: Object.values(gradeCounts),
+        backgroundColor: [
+          'rgba(110,231,183,0.75)',
+          'rgba(59,130,246,0.75)',
+          'rgba(167,139,250,0.75)',
+          'rgba(251,191,36,0.75)',
+          'rgba(248,113,113,0.75)',
+        ],
+        borderColor: [
+          '#6ee7b7', '#3b82f6', '#a78bfa', '#fbbf24', '#f87171',
+        ],
+        borderWidth: 1.5,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...tooltip,
+          callbacks: {
+            label: ctx => ` ${ctx.parsed.y} students (${Math.round(ctx.parsed.y / 200 * 100)}%)`
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: {
+          beginAtZero: true,
+          ticks: { stepSize: 10 },
+          title: { display: true, text: 'Number of Students', color: '#475569' }
+        }
+      }
+    }
+  });
+
+  // ─── Chart 2: Average Score by Subject ──────────────────────────────────────
+  const subjects = ['Mathematics', 'Reading', 'Science', 'History', 'English'];
+  const avgScores  = [71.4, 76.8, 72.1, 79.3, 74.5];
+  const passing    = [60, 60, 60, 60, 60]; // threshold
+
+  new Chart(document.getElementById('subjectChart'), {
+    type: 'radar',
+    data: {
+      labels: subjects,
+      datasets: [
+        {
+          label: 'Class Average',
+          data: avgScores,
+          backgroundColor: 'rgba(59,130,246,0.2)',
+          borderColor: '#3b82f6',
+          pointBackgroundColor: '#3b82f6',
+          pointRadius: 4,
+          borderWidth: 2,
+        },
+        {
+          label: 'Passing Threshold',
+          data: passing,
+          backgroundColor: 'rgba(248,113,113,0.07)',
+          borderColor: 'rgba(248,113,113,0.4)',
+          pointRadius: 0,
+          borderWidth: 1,
+          borderDash: [4, 4],
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { boxWidth: 12, padding: 16, font: { size: 12 } }
+        },
+        tooltip: { ...tooltip }
+      },
+      scales: {
+        r: {
+          min: 40,
+          max: 100,
+          ticks: { stepSize: 15, backdropColor: 'transparent' },
+          grid: { color: '#2d3348' },
+          angleLines: { color: '#2d3348' },
+          pointLabels: { color: '#94a3b8', font: { size: 12 } }
+        }
+      }
+    }
+  });
+
+  // ─── Chart 3: Attendance vs Final Score (scatter) ───────────────────────────
+  // Generate 200 correlated data points with some noise
+  function seededRand(seed) {
+    let s = seed;
+    return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  }
+
+  const rand = seededRand(42);
+  const scatterData = [];
+  for (let i = 0; i < 200; i++) {
+    // attendance 50–100%, score influenced by attendance + noise
+    const attendance = 50 + rand() * 50;
+    const noise = (rand() - 0.5) * 30;
+    const score = Math.min(100, Math.max(10, (attendance - 50) * 1.1 + 45 + noise));
+    scatterData.push({ x: Math.round(attendance), y: Math.round(score) });
+  }
+
+  // Compute simple linear regression for trend line
+  const n = scatterData.length;
+  const meanX = scatterData.reduce((s, p) => s + p.x, 0) / n;
+  const meanY = scatterData.reduce((s, p) => s + p.y, 0) / n;
+  const slope = scatterData.reduce((s, p) => s + (p.x - meanX) * (p.y - meanY), 0) /
+                scatterData.reduce((s, p) => s + (p.x - meanX) ** 2, 0);
+  const intercept = meanY - slope * meanX;
+  const trendLine = [50, 100].map(x => ({ x, y: Math.round(slope * x + intercept) }));
+
+  new Chart(document.getElementById('attendanceChart'), {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          label: 'Student',
+          data: scatterData,
+          backgroundColor: 'rgba(167,139,250,0.55)',
+          pointRadius: 4,
+          pointHoverRadius: 6,
+        },
+        {
+          label: 'Trend Line',
+          data: trendLine,
+          type: 'line',
+          borderColor: '#6ee7b7',
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: false,
+          tension: 0,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { boxWidth: 12, padding: 16, font: { size: 12 } }
+        },
+        tooltip: {
+          ...tooltip,
+          callbacks: {
+            label: ctx => ctx.dataset.label === 'Student'
+              ? ` Attendance: ${ctx.parsed.x}%  |  Score: ${ctx.parsed.y}`
+              : ` Trend: ${ctx.parsed.y}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Attendance Rate (%)', color: '#475569' },
+          min: 45, max: 105,
+          ticks: { callback: v => v + '%' }
+        },
+        y: {
+          title: { display: true, text: 'Final Score', color: '#475569' },
+          min: 0, max: 105,
+        }
+      }
+    }
+  });
+</script>
+</body>
+</html>
